@@ -84,13 +84,12 @@ class Production(GmsPython):
 		elif s =='qiv_inp':
 			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('spinp',m=m)],self.s.db), name = self.n(s)))
 
-
 	def groups(self,m=None):
 		return {g.name: g for g in self.groups_(m=m)}
 	def states(self,m=None):
 		return {k: self.s.standardInstance(state=k) | {attr: getattr(self,attr)()[k] for attr in ('g_endo','g_exo','blocks','args')} for k in ('B','C')}
 	def args(self):
-		return {k: {self.name+'_blocks': '\n'.join([getattr(GamsProduction, module.f)(self.name+'_'+name,name,inclusiveVal=False) for name,module in self.m.items()])} for k in ('B','C')}
+		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(self.name+'_'+name,name,inclusiveVal=False) for name,module in self.m.items()])} for k in ('B','C')}
 	def blocks(self):
 		return {k: OrdSet([f"B_{self.name}_{name}" for name in self.m]) for k in ('B','C')}
 	def g_endo(self):

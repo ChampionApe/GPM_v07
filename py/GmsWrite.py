@@ -5,7 +5,6 @@ def standardArgs(settings, db, gdx, blocks = None, functions = None, run = True,
 	return {k:v for k,v in args.items() if v} | standardRun(settings, db, prefix=prefix_run) if run else {k:v for k,v in args.items() if v}
 
 def standardRun(settings, db, prefix =''):
-	return {prefix+'fix': settings.Compile.fixGroupsText(db,settings['g_exo']), prefix+'unfix': settings.Compile.unfixGroupsText(db,settings['g_endo']), 
-			prefix+'model': writeModel(settings['name'], settings['blocks']), prefix+'solve': writeSolve(solve=settings['solve'],name=settings['name'])}
-
+	return {prefix+'Fix': settings.Compile.fixGroupsText(db,settings['g_exo']), prefix+'Unfix': settings.Compile.unfixGroupsText(db,settings['g_endo']), 
+			prefix+'Model': writeModel(settings['name'], settings['blocks']), prefix+'Solve': writeSolve(solve=settings['solve'],name=settings['name'])}
 
