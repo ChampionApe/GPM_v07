@@ -25,4 +25,9 @@ class SmallOpen:
 
 	def Time_values(self,kwargs):
 		t = pd.Index(kwargs['t'],name=self.ns['t']).astype(int).sort_values() if 't' in kwargs else pd.Index(range(1,3),name=self.ns['t'])
-		return {self.ns['t']: gpyDB.gpy(t), self.ns['t0']: gpyDB.gpy(t[t==t[0]]), self.ns['tE']: gpyDB.gpy(t[t==t[-1]]), self.ns['tx0']: gpyDB.gpy(t[t!= t[0]]), self.ns['txE']: gpyDB.gpy(t[t!= t[-1]])}
+		return {	self.ns['t']: gpyDB.gpy(t), 
+					self.ns['t0']: gpyDB.gpy(t[t==t[0]]), 
+					self.ns['tE']: gpyDB.gpy(t[t==t[-1]]), 
+					self.ns['tx0']: gpyDB.gpy(t[t!= t[0]]), 
+					self.ns['txE']: gpyDB.gpy(t[t!= t[-1]]), 
+					self.ns['tx0E']: gpyDB.gpy(t[(t!=t[0]) & (t!=t[-1])])}

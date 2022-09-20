@@ -125,7 +125,7 @@ class GmsSettings:
 		db = self.db if db is None else db
 		d = {'non_var': db.getTypes(('set','subset','mapping','parameter','scalar_parameter')),
 			 'var_endo': self.db_ss('g_endo',db=db), 'var_exo': self.db_ss('g_exo',db=db)}
-		d['residual'] = {k:v for k,v in db.geTtypes(('scalar_variable','variable')).items() if k not in (list(d['var_endo'])+list(d['var_exo']))}
+		d['residual'] = {k:v for k,v in db.getTypes(('scalar_variable','variable')).items() if k not in (list(d['var_endo'])+list(d['var_exo']))}
 		return d
 
 	# ---	2: Writing methods	--- #
@@ -140,6 +140,11 @@ class GmsSettings:
 			self['args'] = self.check_root(self['args'])
 		self['text'] = {k: arg2string(v,self.Precompiler) for k,v in self['args'].items()}
 		return self['text']
+
+	def writeSolveState(self, state):
+		""" get the text needed to resolve state"""
+		self.setstate(state)
+		return '\n'.join({k: arg2string(v,self.Precompiler) for k,v in GmsWrite.standardRun(self, self.db).items()}.values())
 
 	def check_root(self,args):
 		return {'Root': GmsWrite.writeRoot()} | args if not (list(args.keys()))[0].endswith(('Root','Root.gms','Root.gmy','Root.txt')) else args

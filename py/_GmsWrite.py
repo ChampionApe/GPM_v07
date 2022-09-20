@@ -8,6 +8,7 @@ import regex_gms
 #	2. writeGpy: A method that writes gams-like text from gpy symbols.
 # 	3. write_from_db: A method that declares and read in sets, parameters, variables by reading a database.
 # 	4. 	Default components: methods for writing a number of standad components used in GmsModels.
+#	5. Loop, update, solve, store.
 
 # -------------------------------------- 1: Default options -------------------------------------- #
 default_user_functions = """
@@ -115,7 +116,6 @@ class _writeFromDb:
 		return writeAux(start,end,itersym,joinby='\n')
 
 # -------------------------------------- 4: Default components	-------------------------------------- #
-
 def auxdict2equal(k,v):
 	return k+'='+v
 
@@ -138,3 +138,21 @@ def writeModel(name, blocks):
 
 def writeSolve(solve=None,name=None):
 	return f"""solve {name} using CNS;""" if solve is None else solve
+
+
+# -------------------------------------- 5: Loop, update, solve, store	-------------------------------------- #
+def loopText(text, domains, c = None):
+	return f"loop({domains}{condition(c=c)},\n\t{text}\n);"
+
+def updateFromGridDB(db0, db, name, updateDict):
+	return ';\n\t'.join([f"{writeGpy(db0[k], c=v, l = '.fx')} = {writeGpy(db[k+'_'+name])}" for k,v in updateDict.items()])+';'
+
+def updateSolFromGridDB(db0, db, name, updateSolDict):
+	return ';\n\t'.join([f"{writeGpy( db[k], c=v, l = '.fx')} = {writeGpy(db0[k.split('sol_',1)[-1].rsplit('_'+name,1)[0]], l = '.l')}" for k,v in updateSolDict.items()])+';'
+
+def declareFromGridDB(db0, db):
+	return writeDeclare(db, exceptions=OrdSet(db0.symbols), exceptions_load = OrdSet(db0.symbols)+OrdSet([k for k in db.symbols if k.startswith('sol_')]), gdx = f"""%{db.name}%""")
+
+def loopUpdateSolveSol(loop, name, db, db0, updateDict, updateSolDict = None, loopConditional = None, solve = None, model = None):
+	text = updateFromGridDB(db0, db, name, updateDict)+writeSolve(solve=solve, name = model)+updateSolFromGridDB(db0,db,name,noneInit(updateSolDict,{}))
+	return declareFromGridDB(db0,db)+loopText(text, loop, c = loopConditional)

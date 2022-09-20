@@ -38,7 +38,7 @@ class Compile:
 			return ""
 
 	def declareGroupText(self,db,g):
-		return "\n".join([f"{g.gtype} {writeGpy(db[var])};" for var in g.conditions if var not in self.declared])
+		return "\n".join([f"{g.type} {writeGpy(db[var])};" for var in g.conditions if var not in self.declared])
 
 	def fixGroupsText(self,db,gs):
 		metagroup = self.metaGroup(db,gs=gs)
@@ -55,7 +55,7 @@ class Compile:
 		return "\n".join([f"{writeGpy(db[k],c=v,l='.lo')} = -inf;\n{writeGpy(db[k],c=v,l='.up')} = inf;" for k,v in g.conditions.items()])
 
 class Group:
-	def __init__(self,name,v=None,g=None,neg_v=None,neg_g=None,out=None,out_neg=None,gtype='variable'):
+	def __init__(self,name,v=None,g=None,neg_v=None,neg_g=None,out=None,out_neg=None,type='variable'):
 		self.name = name
 		self.v = noneInit(v,[])
 		self.g = OrdSet(noneInit(g,[]))
@@ -63,7 +63,7 @@ class Group:
 		self.neg_g = OrdSet(noneInit(neg_g,[]))
 		self.out = noneInit(out,{})
 		self.out_neg = noneInit(out_neg,{})
-		self.gtype = gtype # should be either variable or parameter to indicate the type of symbol group.
+		self.type = type # should be either variable or parameter to indicate the type of symbol group.
 
 	def c_var(self,name):
 		return ('or', self.out[name]) if len(self.out[name])>1 else self.out[name][0]

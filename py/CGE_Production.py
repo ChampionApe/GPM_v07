@@ -2,11 +2,21 @@ from CGE_GmsPython import *
 import GamsProduction
 
 class Production(GmsPython):
-	def __init__(self, f=None, tree=None, ns=None, s=None, glob=None, s_kwargs = None, g_kwargs = None):
+	def __init__(self, f=None, tree=None, ns=None, s=None, glob=None, s_kwargs = None, g_kwargs = None, dur_kwargs = None):
 		""" Initialize from a pickle file 'f' or nesting tree 'tree'. """
 		super().__init__(name=tree.name if tree else None, f=f, s=s, glob=glob, ns=ns, s_kwargs = s_kwargs, g_kwargs=g_kwargs)
 		if f is None:
 			self.readTree(tree)
+			self.addDurables(**noneInit(dur_kwargs, {}))
+
+	def addDurables(self, dur = None, f = None, dur2inv = None):
+		self.ns.update({k: f"{k}_{self.name}_IC" for k in ('dur','inv')})
+		self.s.db[self.n('dur')] = noneInit(dur, pd.MultiIndex.from_product([self.get('output').levels[0], []], names = ['s','n']))
+		self.s.db[self.n('dur2inv')] = pd.MultiIndex.from_frame(self.get('dur').to_frame(index=False).assign(nn=lambda x: 'I_'+x.n)) if dur2inv is None else dur2inv
+		self.s.db[self.n('inv')] = self.get('dur2inv').droplevel(self.ns['n']).unique().rename({self.ns['nn']:self.ns['n']})
+		self.s.db[self.n('n')] = self.get('n').union(self.get('inv').levels[-1])
+		self.s.db[self.n('input')] = self.get('input').difference(self.get('dur')).union(self.get('inv'))
+		self.m[f"{self.name}"] = Submodule(**{'f': noneInit(f, 'sqrAdjCosts')})
 
 	def readTree(self,tree):
 		gpyDB_wheels.robust.robust_merge_dbs(self.s.db,tree.db,priority='second')
@@ -55,49 +65,42 @@ class Production(GmsPython):
 				break
 		return exomu_inp, exomu_out
 
-	@property
-	def default_variables(self):
-		return ('pS','pD','qS','qD','mu','sigma','eta','qnorm_out','qnorm_inp','qiv_out','qiv_inp')
 	def initDB(self,m=None):
-		return gpyDB_wheels.robust.robust_merge_dbs(self.s.db,{self.n(s): self.initSymbol(s,m=m) for s in self.default_variables},priority='first')
-	def initSymbol(self,s,m=None):
-		if s == 'pS':
-			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('output',m=m)],self.s.db), name=self.n(s)))
-		elif s == 'qS':
-			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('output',m=m)],self.s.db), name=self.n(s)))
-		elif s == 'pD':
-			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('int',m=m).union(self.get('input',m=m))],self.s.db), name = self.n(s)))
-		elif s == 'qD':
-			return gpyDB.gpy(pd.Series(0.5, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('int',m=m).union(self.get('input',m=m))],self.s.db), name = self.n(s)))
-		elif s == 'mu':
-			return gpyDB.gpy(pd.Series(1, index = self.get('map',m=m), name = self.n(s)))
-		elif s == 'eta':
-			return gpyDB.gpy(pd.Series(0.5, index = self.get('knout',m=m), name = self.n(s)))
-		elif s == 'sigma':
-			return gpyDB.gpy(pd.Series(0.5, index = self.get('kninp',m=m), name = self.n(s)))
-		elif s == 'qnorm_out':
-			return gpyDB.gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('knout',m=m)],self.s.db),name=self.n(s)),**{'type':'parameter'})
-		elif s == 'qnorm_inp':
-			return gpyDB.gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('kninp',m=m)],self.s.db),name=self.n(s)),**{'type':'parameter'})
-		elif s =='qiv_out':
-			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('spout',m=m)],self.s.db), name = self.n(s)))
-		elif s =='qiv_inp':
-			return gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('spinp',m=m)],self.s.db), name = self.n(s)))
+		return gpyDB_wheels.robust.robust_merge_dbs(self.s.db,self.initSymbols(m=m),priority='first')
+
+	def initSymbols(self,m=None):
+		return {self.n('pS'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('output',m=m)],self.s.db), name=self.n('pS'))),
+				self.n('qS'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('output',m=m)],self.s.db), name=self.n('qS'))),
+				self.n('pD'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('int',m=m).union(self.get('input',m=m)).union(self.get('dur',m=m))],self.s.db), name = self.n('pD'))),
+				self.n('qD'): gpyDB.gpy(pd.Series(0.5, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('int',m=m).union(self.get('input',m=m)).union(self.get('dur',m=m))],self.s.db), name = self.n('qD'))),
+				self.n('mu'): gpyDB.gpy(pd.Series(1, index = self.get('map',m=m), name = self.n('mu'))),
+				self.n('eta'): gpyDB.gpy(pd.Series(0.5, index = self.get('knout',m=m), name = self.n('eta'))),
+				self.n('sigma'): gpyDB.gpy(pd.Series(0.5, index = self.get('kninp',m=m), name = self.n('sigma'))),
+				self.n('qnorm_out'): gpyDB.gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('knout',m=m)],self.s.db),name=self.n('qnorm_out')),**{'type':'parameter'}),
+				self.n('qnorm_inp'): gpyDB.gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('kninp',m=m)],self.s.db),name=self.n('qnorm_inp')),**{'type':'parameter'}),
+				self.n('qiv_out'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('spout',m=m)],self.s.db), name = self.n('qiv_out'))),
+				self.n('qiv_inp'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('spinp',m=m)],self.s.db), name = self.n('qiv_inp'))),
+				self.n('Rrate'): gpyDB.gpy(pd.Series(self.get('R_LR'), index = self.get('txE'), name = self.n('Rrate'))),
+				self.n('rDepr'): gpyDB.gpy(pd.Series(0.05, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('dur',m=m)],self.s.db), name = self.n('rDepr',m=m))),
+				self.n('icpar1'): gpyDB.gpy(pd.Series(0.1, index = self.get('dur',m=m), name= self.n('icpar1',m=m))),
+				self.n('icpar2'): gpyDB.gpy(pd.Series(0.05, index = self.get('dur',m=m), name= self.n('icpar2',m=m))),
+				self.n('K_tvc'): gpyDB.gpy(pd.Series(self.get('g_LR'), index = self.get('dur',m=m), name=self.n('K_tvc',m=m))),
+				self.n('ic'): gpyDB.gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'), self.get('output',m=m)], self.s.db), name= self.n('ic',m=m)))}
 
 	def groups(self,m=None):
 		return {g.name: g for g in self.groups_(m=m)}
 	def states(self,m=None):
 		return {k: self.s.standardInstance(state=k) | {attr: getattr(self,attr)()[k] for attr in ('g_endo','g_exo','blocks','args')} for k in ('B','C')}
 	def args(self):
-		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(self.name+'_'+name,name,inclusiveVal=False) for name,module in self.m.items()])} for k in ('B','C')}
+		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(self.name+'_'+name,name) for name,module in self.m.items()])} for k in ('B','C')}
 	def blocks(self):
 		return {k: OrdSet([f"B_{self.name}_{name}" for name in self.m]) for k in ('B','C')}
 	def g_endo(self):
-		return {'B': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_exo_in_calib"]),
-				'C': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_endo_in_calib"])}
+		return {'B': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_endo_dur"]),
+				'C': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_endo_in_calib",f"G_{self.name}_endo_dur"])}
 	def g_exo(self):
-		return {'B': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_endo_in_calib"]),
-				'C': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_exo_in_calib"])}
+		return {'B': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_endo_in_calib",f"G_{self.name}_exo_dur"]),
+				'C': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_exo_dur"])}
 	def groups_(self,m=None):
 		return [GmsPy.Group(f"G_{self.name}_exo_always", 
 		v = 	[('qS', self.g('output',m=m)), 
@@ -122,4 +125,18 @@ class Production(GmsPython):
 				 ('pS', ('and', [self.g('endo_pS',m=m), self.g('t0')]))]),
 				GmsPy.Group(f"G_{self.name}_endo_in_calib",
 		v = 	[('mu', ('not', self.g('exomu',m=m))),
-				 ('qS', ('and', [self.g('endo_qS',m=m), self.g('t0')]))])]
+				 ('qS', ('and', [self.g('endo_qS',m=m), self.g('t0')]))]),
+				GmsPy.Group(f"G_{self.name}_exo_dur", 
+		v = [('Rrate', None),
+			 ('rDepr', self.g('dur',m=m)),
+			 ('icpar1', self.g('dur',m=m)),
+			 ('icpar2', self.g('dur',m=m)),
+			 ('K_tvc' , self.g('dur',m=m)),
+			 ('qD', ('and', [self.g('dur',m=m), self.g('t0')]))
+			 ]),
+				GmsPy.Group(f"G_{self.name}_endo_dur",
+		v = [('qD', ('and', [self.g('dur',m=m), self.g('tx0')])),
+			 ('pD', ('and', [self.g('dur',m=m), self.g('txE')])),
+			 ('ic', ('and', [self.g('output',m=m), self.g('txE')]))
+		]
+		)]

@@ -47,16 +47,16 @@ $ENDBLOCK
 """
 
 # 1.2: Scale-preserving nests:
-def Fnorm_input(ftype,blockname,name,inclusiveVal=True):
+def Fnorm_input(ftype,blockname,name,inclusiveVal = False):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_input(name)}
 	{_Fnorm_input_with_InclusiveValue(ftype,name) if inclusiveVal else _Fnorm_input_demand(ftype,name)}
 $ENDBLOCK
 """
-def CES_norm(blockname,name,inclusiveVal = True):
+def CES_norm(blockname,name,inclusiveVal = False):
 	return Fnorm_input('CES',blockname,name,inclusiveVal=inclusiveVal)
-def MNL(blockname,name,inclusiveVal=True):
+def MNL(blockname,name,inclusiveVal = False):
 	return Fnorm_input('exp',blockname,name,inclusiveVal=inclusiveVal)
 
 # 2: Output type nests:
@@ -70,7 +70,7 @@ $BLOCK B_{blockname}
 $ENDBLOCK
 """
 # 2.2: scale-preserving nests: 
-def Fnorm_output(ftype,blockname,name,inclusiveVal=True):
+def Fnorm_output(ftype,blockname,name,inclusiveVal = False):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_output(name)}
@@ -78,19 +78,19 @@ $BLOCK B_{blockname}
 $ENDBLOCK
 """
 
-def CET_norm(blockname,name,inclusiveVal=True):
+def CET_norm(blockname,name,inclusiveVal = False):
 	return Fnorm_output('CES',blockname,name,inclusiveVal=inclusiveVal)
-def MNL_out(blockname,name,inclusiveVal=True):
+def MNL_out(blockname,name,inclusiveVal = False):
 	return Fnorm_output('exp',blockname,name,inclusiveVal=inclusiveVal)
 
 # 3: Adjustment costs / installation cost equations:
 def sqrAdjCosts(blockname, name):
 	return f"""
 $BLOCK B_{blockname}
-	E_lom_{name}[t,s,n](dur_{name}[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[n,nn]), qD[t,s,nn]))/(1+g_LR);
-	E_pk_{name}[t,s,n]$(dur_{name}[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*(sqr(icpar2[s,n]*qD[t,s,n])-sqr(qD[t,s,nn]))/sqr(qD[t,s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
-	E_Ktvc_{name}[t,s,n]$(dur_{name}[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
-	E_instcost_{name}[t,s,n]$(output_{name}[s,n] and txE[t])..	ic[t,s,n] =E= (pS[t,s,n]/sum(nn$(output_{name}[s,nn]), qS[t,s,n]*pS[t,s,nn]))*sum([nn,nnn]$(dur_{name}[s,nn] and dur2inv[nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
+	E_lom_{name}[t,s,n]$(dur_{name}_IC[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
+	E_pk_{name}[t,s,n]$(dur_{name}_IC[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*(sqr(icpar2[s,n]*qD[t,s,n])-sqr(qD[t,s,nn]))/sqr(qD[t,s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
+	E_Ktvc_{name}[t,s,n]$(dur_{name}_IC[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
+	E_instcost_{name}[t,s,n]$(output_{name}[s,n] and txE[t])..	ic[t,s,n] =E= (pS[t,s,n]/sum(nn$(output_{name}[s,nn]), qS[t,s,n]*pS[t,s,nn]))*sum([nn,nnn]$(dur_{name}_IC[s,nn] and dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
 $ENDBLOCK
 """
 
