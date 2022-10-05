@@ -211,11 +211,11 @@ class GmsModel:
 	def addlocal(self,placeholder,local):
 		self.opt.defines[placeholder] = local
 
-	def addDB(self,db,db_str=None,merge=True,exportdb=True,exportTo=None):
+	def addDB(self,db,db_str=None,merge=True,mergeGdx='clear',exportdb=True,exportTo=None):
 		""" Add a GpyDB by specifying db_str or exportTo. Writes a gdx file + add it as a placeholder in the model. """
 		db_str = os.path.join(db.work_folder if exportTo is None else exportTo,db.name) if db_str is None else db_str
 		if merge:
-			db.merge_internal()
+			db.merge_internal(merge=mergeGdx)
 		if exportdb:
 			db.database.export(db_str)
 		self.addlocal(db.name, db_str)

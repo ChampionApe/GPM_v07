@@ -37,7 +37,7 @@ def zp_output(name):
 
 # 1: Input type nests:
 # 1.1: CES nest:
-def CES(blockname,name,**kwargs):
+def CES(blockname,name,m,**kwargs):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_input(name)}
@@ -47,21 +47,21 @@ $ENDBLOCK
 """
 
 # 1.2: Scale-preserving nests:
-def Fnorm_input(ftype,blockname,name,inclusiveVal = False):
+def Fnorm_input(ftype,blockname,name,m,inclusiveVal = False):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_input(name)}
 	{_Fnorm_input_with_InclusiveValue(ftype,name) if inclusiveVal else _Fnorm_input_demand(ftype,name)}
 $ENDBLOCK
 """
-def CES_norm(blockname,name,inclusiveVal = False):
-	return Fnorm_input('CES',blockname,name,inclusiveVal=inclusiveVal)
-def MNL(blockname,name,inclusiveVal = False):
-	return Fnorm_input('exp',blockname,name,inclusiveVal=inclusiveVal)
+def CES_norm(blockname,name,m,inclusiveVal = False):
+	return Fnorm_input('CES',blockname,name,m,inclusiveVal=inclusiveVal)
+def MNL(blockname,name,m,inclusiveVal = False):
+	return Fnorm_input('exp',blockname,name,m,inclusiveVal=inclusiveVal)
 
 # 2: Output type nests:
 # 2.1: CET function:
-def CET(blockname,name,**kwargs):
+def CET(blockname,name,m,**kwargs):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_output(name)}
@@ -70,7 +70,7 @@ $BLOCK B_{blockname}
 $ENDBLOCK
 """
 # 2.2: scale-preserving nests: 
-def Fnorm_output(ftype,blockname,name,inclusiveVal = False):
+def Fnorm_output(ftype,blockname,name,m,inclusiveVal = False):
 	return f"""
 $BLOCK B_{blockname}
 	{zp_output(name)}
@@ -78,28 +78,42 @@ $BLOCK B_{blockname}
 $ENDBLOCK
 """
 
-def CET_norm(blockname,name,inclusiveVal = False):
-	return Fnorm_output('CES',blockname,name,inclusiveVal=inclusiveVal)
-def MNL_out(blockname,name,inclusiveVal = False):
-	return Fnorm_output('exp',blockname,name,inclusiveVal=inclusiveVal)
+def CET_norm(blockname,name,m,inclusiveVal = False):
+	return Fnorm_output('CES',blockname,name,m,inclusiveVal=inclusiveVal)
+def MNL_out(blockname,name,m,inclusiveVal = False):
+	return Fnorm_output('exp',blockname,name,m,inclusiveVal=inclusiveVal)
 
 # 3: Adjustment costs / installation cost equations:
-def sqrAdjCosts(blockname, name):
+def sqrAdjCosts(blockname, name, m):
 	return f"""
 $BLOCK B_{blockname}
-	E_lom_{name}[t,s,n]$(dur_{name}_IC[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
-	E_pk_{name}[t,s,n]$(dur_{name}_IC[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*(sqr(icpar2[s,n]*qD[t,s,n])-sqr(qD[t,s,nn]))/sqr(qD[t,s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
-	E_Ktvc_{name}[t,s,n]$(dur_{name}_IC[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
-	E_instcost_{name}[t,s,n]$(output_{name}[s,n] and txE[t])..	ic[t,s,n] =E= (pS[t,s,n]/sum(nn$(output_{name}[s,nn]), qS[t,s,n]*pS[t,s,nn]))*sum([nn,nnn]$(dur_{name}_IC[s,nn] and dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
+	E_lom_{name}[t,s,n]$(dur_{m}[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
+	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
+	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
+	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= ((qS[t,s,n]*pS[t,s,n])/sum(nn$(output_{m}[s,nn]), qS[t,s,nn]*pS[t,s,nn]))*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
 $ENDBLOCK
 """
 
 
 # 4: Introduce price wedge with mark-up, unit-tax, and installation costs
-def PriceWedge(blockname,name):
+def priceWedge(blockname,name,m):
 	return f"""
 $BLOCK B_{blockname}
-	E_pw_{name}[t,s,n]$(output_{name}[s,n] and txE[t])..	p[t,n] =E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
+	E_pw_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	p[t,n] =E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
 $ENDBLOCK
 """
 
+
+# 5: System of value shares
+def valueShares():
+	return f"""
+$BLOCK B_ValueShares
+	E_Out_knot[t,s,n]$(knotOutTree[s,n])..								vD[t,s,n]	=E= sum(nn$(map[s,nn,n] and branchOut[s,nn]), vS[t,s,n])+sum(nn$(map[s,nn,n] and branchNOut[s,nn]), vD[t,s,n]);
+	E_Out_shares_o[t,s,n,nn]$(mapOut[s,n,nn] and branchOut[s,n])..		mu[t,s,n,nn]=E= vS[t,s,n]/vD[t,s,nn];
+	E_Out_shares_no[t,s,n,nn]$(mapOut[s,n,nn] and branchNOut[s,n])..	mu[t,s,n,nn]=E= vD[t,s,n]/vD[t,s,nn];
+	E_Inp_knot_o[t,s,n]$(knotOut[s,n])..								vS[t,s,n]	=E= sum(nn$(map[s,n,nn]), vD[t,s,nn]);
+	E_Inp_knot_no[t,s,n]$(knotNOut[s,n])..								vD[t,s,n]	=E= sum(nn$(map[s,n,nn]), vD[t,s,nn]);
+	E_Inp_shares2o[t,s,n,nn]$(mapInp[s,n,nn] and branch2Out[s,nn])..	mu[t,s,n,nn]=E= vD[t,s,nn]/vS[t,s,n];
+	E_Inp_shares2no[t,s,n,nn]$(mapInp[s,n,nn] and branch2NOut[s,nn])..	mu[t,s,n,nn]=E= vD[t,s,nn]/vD[t,s,n];
+$ENDBLOCK
+"""

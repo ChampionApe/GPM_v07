@@ -21,7 +21,7 @@ class tree:
 
 	@property
 	def standardNamespace(self):
-		return {k:k for k in ('n','nn','nnn','s')} | {k: k+'_'+self.name for k in ('map','knot','branch','input','output','int')}
+		return {k: k+'_'+self.name for k in ('map','knot','branch','input','output','int')}
 
 	def addFunctionandIO(self,f,io):
 		if f:
@@ -50,11 +50,11 @@ class tree:
 		return self[item].vals
 
 	def attrs_from_tree(self):
-		self['map'] = pd.MultiIndex.from_tuples(self.tree, names = [self.ns['s'], self.ns['n'],self.ns['nn']])
-		self['knot'] = self.get('map').droplevel(self.ns['nn']).unique() if self.io == 'input' else self.get('map').droplevel(self.ns['n']).rename([self.ns['s'],self.ns['n']]).unique()
-		self['branch'] = self.get('map').droplevel(self.ns['n']).unique().rename([self.ns['s'],self.ns['n']]) if self.io == 'input' else self.get('map').droplevel(self.ns['nn']).unique()
-		self['n'] = self.get('knot').union(self.get('branch')).droplevel(self.ns['s']).unique()
-		self['s'] = self.get('map').get_level_values(self.ns['s']).unique()
+		self['map'] = pd.MultiIndex.from_tuples(self.tree, names = ['s', 'n','nn'])
+		self['knot'] = self.get('map').droplevel('nn').unique() if self.io == 'input' else self.get('map').droplevel('n').rename(['s','n']).unique()
+		self['branch'] = self.get('map').droplevel('n').unique().rename(['s','n']) if self.io == 'input' else self.get('map').droplevel('nn').unique()
+		self['n'] = self.get('knot').union(self.get('branch')).droplevel('s').unique()
+		self['s'] = self.get('map').get_level_values('s').unique()
 		self['input'] = self.get('branch').difference(self.get('knot')) if self.io == 'input' else self.get('knot').difference(self.get('branch'))
 		self['output'] = self.get('branch').difference(self.get('knot')) if self.io == 'output' else self.get('knot').difference(self.get('branch'))
 		self['int'] = (self.get('branch').union(self.get('knot'))).difference(self.get('input').union(self.get('output')))
@@ -91,6 +91,7 @@ class aggTree:
 		self.attrs_from_trees()
 		self.adjust_trees()
 		[self.add_db_prune(tree) for tree in self.trees.values()];
+		self.namespace = namespace
 		if namespace:
 			gpyDB_wheels.aggregateDB.updateSetValues(self.db,self.n('n'),namespace)
 		return self

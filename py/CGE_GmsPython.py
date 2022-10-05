@@ -1,5 +1,5 @@
-import CGE_globals, GmsPy, pickle, pandas as pd, os
-from pyDatabases import gpyDB, gpyDB_wheels, OrdSet, adjMultiIndexDB, adjMultiIndex
+import CGE_globals, GmsPy, GmsWrite, pickle, pandas as pd, os
+from pyDatabases import gpyDB, gpyDB_wheels, OrdSet, adjMultiIndexDB, adjMultiIndex, gpy
 from GmsPy import gmspyStandardOrder
 from auxFunctions import noneInit, dictInit
 
@@ -34,8 +34,9 @@ class GmsPython:
 
 	def InitGlobals(self, glob, g_kwargs):
 		self.glob = getattr(CGE_globals, glob)(kwargs_ns=self.ns,kwargs_vals=g_kwargs) if type(glob) is str else glob
-		self.ns.update(self.glob.ns)
-		[self.s.db.__setitem__(k,v) for k,v in self.glob.db.items()];
+		if self.glob:
+			self.ns.update(self.glob.ns)
+			[self.s.db.__setitem__(k,v) for k,v in self.glob.db.items()];
 
 	# --- 		1: Interact w. namespace/database 		--- #
 	def n(self, item, m=None):
@@ -95,20 +96,46 @@ class GmsPython:
 		self.s['args'] = GmsPy.sortedArgs(self.s['args'], order = order)
 		return self.s.write(**noneInit(write_kwargs,{}))
 
-	def run(self, model=None, db_str = None, exportdb = True, exportTo = None, ws = None, options = None, options_add=None, options_run=None,**kwargs):
+	def run(self, model=None, db_str = None, exportdb = True, exportTo = None, ws = None, options = None, merge=True, mergeGdx = 'clear', options_add=None, options_run=None,**kwargs):
 		if isinstance(model, GmsPy.GmsModel):
-			return self.runModel(model, db_str=db_str, exportdb=exportdb,exportTo=exportTo,options_add=options_add, options_run=options_run)
+			return self.runModel(model, db_str=db_str, merge=merge, mergeGdx = mergeGdx, exportdb=exportdb,exportTo=exportTo,options_add=options_add, options_run=options_run)
 		else:
-			return self.runAndInitModel(db_str=db_str, exportdb=exportdb,exportTo=exportTo,ws=ws,options=options,options_add=options_add, options_run=options_run,**kwargs)
+			return self.runAndInitModel(db_str=db_str, merge=merge, mergeGdx = mergeGdx, exportdb=exportdb,exportTo=exportTo,ws=ws,options=options,options_add=options_add, options_run=options_run,**kwargs)
 
-	def runAndInitModel(self, db_str=None, exportdb=True, exportTo=None, ws=None, options=None, options_add=None, options_run = None, **kwargs):
+	def runAndInitModel(self, db_str=None, exportdb=True, exportTo=None, ws=None, options=None, merge=True, mergeGdx = 'clear', options_add=None, options_run = None, **kwargs):
 		model = GmsPy.GmsModel(ws=ws,options=options,**kwargs)
-		return self.runModel(model, db_str = db_str, exportdb=exportdb, exportTo = exportTo,options_add=options_add, options_run = options_run)
+		return self.runModel(model, db_str = db_str, merge=merge, mergeGdx = mergeGdx, exportdb=exportdb, exportTo = exportTo,options_add=options_add, options_run = options_run)
 
-	def runModel(self,model,db_str=None, merge=True, exportdb=True, exportTo = None, options_add=None, options_run = None):
-		model.addDB(self.s.db, db_str=db_str, merge=merge, exportdb=exportdb, exportTo=exportTo)
+	def runModel(self,model,db_str=None, merge=True, mergeGdx = 'clear', exportdb=True, exportTo = None, options_add=None, options_run = None):
+		model.addDB(self.s.db, db_str=db_str, merge=merge, mergeGdx = mergeGdx, exportdb=exportdb, exportTo=exportTo)
 		model.run(run = '\n'.join(self.s['text'].values()), options_add=options_add, options_run = options_run)
 		return model
+
+	def sneakyCalib(self, dbTarget, cState = 'C', model=None, db_str = None, exportdb = True, exportTo = None, ws = None, options = None, options_add=None, options_run=None, loop_kwargs = None, **kwargs):
+		""" Like sneaky solve, but changes state to 'C' """
+		if model is None:
+			model = GmsPy.GmsModel(ws = ws, options=options, **kwargs)
+		options_run = {'checkpoint': model.ws.add_checkpoint()} | noneInit(options_run, {})
+		self.run(model = model, db_str = db_str, exportdb = exportdb, exportTo = exportTo, options_add=options_add, options_run=options_run) # solve baseline, add checkpoint
+		cp = model.ws.add_checkpoint()
+		model.run(run = self.s.writeSolveState(cState), options_add = {'checkpoint': options_run['checkpoint']}, options_run = {'checkpoint': cp}) # switch to calibration state, run from checkpoint, add new checkpint
+		text, db = GmsWrite.SolveLoop(self.s, dbTarget, db0 = model.out_db, **noneInit(loop_kwargs, {})) # run loop with exogenous variables gradually adjusted towards solution
+		cp2 = model.ws.add_checkpoint()
+		model.addDB(db)
+		model.run(run=text, options_add = {'checkpoint': cp}, options_run = {'checkpoint': cp2})
+		return model, cp2
+
+	def sneakySolve(self, dbTarget, model=None, db_str = None, exportdb = True, exportTo = None, ws = None, options = None, options_add=None, options_run=None, loop_kwargs = None, **kwargs):
+		""" Start from a feasible solution, and then sneak up on solution by adjusting exogenous values """
+		if model is None:
+			model = GmsPy.GmsModel(ws = ws, options=options, **kwargs)
+		options_run = {'checkpoint': model.ws.add_checkpoint()} | noneInit(options_run, {})
+		self.run(model = model, db_str = db_str, exportdb = exportdb, exportTo = exportTo, options_add=options_add, options_run=options_run)
+		text, db = GmsWrite.SolveLoop(self.s, dbTarget, db0 = model.out_db, **noneInit(loop_kwargs, {}))
+		cp = model.ws.add_checkpoint()
+		model.addDB(db)
+		model.run(run=text, options_add = {'checkpoint':options_run['checkpoint']}, options_run = {'checkpoint': cp})
+		return model, cp
 
 class Submodule:
 	""" Simple submodule that is not defined by a GmsSettings instance. """
