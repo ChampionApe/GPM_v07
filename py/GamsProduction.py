@@ -37,9 +37,9 @@ def zp_output(name):
 
 # 1: Input type nests:
 # 1.1: CES nest:
-def CES(blockname,name,m,**kwargs):
+def CES(name,m,**kwargs):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	{zp_input(name)}
 	E_q_out_{name}[t,s,n]$(branch2o_{name}[s,n] and txE[t])..	qD[t,s,n] =E= sum(nn$(map_{name}[s,nn,n]), mu[s,nn,n] * (pS[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qS[t,s,nn]);
 	E_q_nout_{name}[t,s,n]$(branch2no_{name}[s,n] and txE[t])..	qD[t,s,n] =E= sum(nn$(map_{name}[s,nn,n]), mu[s,nn,n] * (pD[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qD[t,s,nn]);
@@ -47,46 +47,46 @@ $ENDBLOCK
 """
 
 # 1.2: Scale-preserving nests:
-def Fnorm_input(ftype,blockname,name,m,inclusiveVal = False):
+def Fnorm_input(ftype,name,m,inclusiveVal = False):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	{zp_input(name)}
 	{_Fnorm_input_with_InclusiveValue(ftype,name) if inclusiveVal else _Fnorm_input_demand(ftype,name)}
 $ENDBLOCK
 """
-def CES_norm(blockname,name,m,inclusiveVal = False):
-	return Fnorm_input('CES',blockname,name,m,inclusiveVal=inclusiveVal)
-def MNL(blockname,name,m,inclusiveVal = False):
-	return Fnorm_input('exp',blockname,name,m,inclusiveVal=inclusiveVal)
+def CES_norm(name,m,inclusiveVal = False):
+	return Fnorm_input('CES',name,m,inclusiveVal=inclusiveVal)
+def MNL(name,m,inclusiveVal = False):
+	return Fnorm_input('exp',name,m,inclusiveVal=inclusiveVal)
 
 # 2: Output type nests:
 # 2.1: CET function:
-def CET(blockname,name,m,**kwargs):
+def CET(name,m,**kwargs):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	{zp_output(name)}
 	E_demand_out_{name}[t,s,n]$(branch_o_{name}[s,n] and txE[t])..		qS[t,s,n] =E= sum(nn$(map_{name}[s,n,nn]), mu[s,n,nn] * (pS[t,s,n]/pD[t,s,nn])**(eta[s,nn]) * qD[t,s,nn]);
 	E_demand_nout_{name}[t,s,n]$(branch_no_{name}[s,n] and txE[t])..	qD[t,s,n] =E= sum(nn$(map_{name}[s,n,nn]), mu[s,n,nn] * (pD[t,s,n]/pD[t,s,nn])**(eta[s,nn]) * qD[t,s,nn]);
 $ENDBLOCK
 """
 # 2.2: scale-preserving nests: 
-def Fnorm_output(ftype,blockname,name,m,inclusiveVal = False):
+def Fnorm_output(ftype,name,m,inclusiveVal = False):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	{zp_output(name)}
 	{_Fnorm_output_with_InclusiveValue(ftype,name) if inclusiveVal else _Fnorm_output_demand(ftype,name)}
 $ENDBLOCK
 """
 
-def CET_norm(blockname,name,m,inclusiveVal = False):
-	return Fnorm_output('CES',blockname,name,m,inclusiveVal=inclusiveVal)
-def MNL_out(blockname,name,m,inclusiveVal = False):
-	return Fnorm_output('exp',blockname,name,m,inclusiveVal=inclusiveVal)
+def CET_norm(name,m,inclusiveVal = False):
+	return Fnorm_output('CES',name,m,inclusiveVal=inclusiveVal)
+def MNL_out(name,m,inclusiveVal = False):
+	return Fnorm_output('exp',name,m,inclusiveVal=inclusiveVal)
 
 # 3: Adjustment costs / installation cost equations:
-def sqrAdjCosts(blockname, name, m):
+def sqrAdjCosts(name, m):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	E_lom_{name}[t,s,n]$(dur_{m}[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
 	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
 	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
@@ -96,9 +96,9 @@ $ENDBLOCK
 
 
 # 4: Introduce price wedge with mark-up, unit-tax, and installation costs
-def priceWedge(blockname,name,m):
+def priceWedge(name,m):
 	return f"""
-$BLOCK B_{blockname}
+$BLOCK B_{name}
 	E_pw_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	p[t,n] =E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
 $ENDBLOCK
 """

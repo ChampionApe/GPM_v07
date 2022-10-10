@@ -36,13 +36,13 @@ sets
 	input_APi[s,n]
 	output_APi[s,n]
 	int_APi[s,n]
-	map_tree[s,n,nn]
-	knot_tree[s,n]
-	branch_tree[s,n]
-	knot_o_tree[s,n]
-	knot_no_tree[s,n]
-	branch2o_tree[s,n]
-	branch2no_tree[s,n]
+	map_APi_tree[s,n,nn]
+	knot_APi_tree[s,n]
+	branch_APi_tree[s,n]
+	knot_o_APi_tree[s,n]
+	knot_no_APi_tree[s,n]
+	branch2o_APi_tree[s,n]
+	branch2no_APi_tree[s,n]
 	endo_mu_APi[s,n,nn]
 	endo_qD_APi[s,n]
 	dur_APi[s,n]
@@ -90,13 +90,13 @@ $load spinp_APi
 $load input_APi
 $load output_APi
 $load int_APi
-$load map_tree
-$load knot_tree
-$load branch_tree
-$load knot_o_tree
-$load knot_no_tree
-$load branch2o_tree
-$load branch2no_tree
+$load map_APi_tree
+$load knot_APi_tree
+$load branch_APi_tree
+$load knot_o_APi_tree
+$load knot_no_APi_tree
+$load branch2o_APi_tree
+$load branch2no_APi_tree
 $load endo_mu_APi
 $load endo_qD_APi
 $load dur_APi
@@ -144,8 +144,8 @@ $GDXIN
 $offMulti;
 
 variables
-	sigma[s,n]
 	mu[s,n,nn]
+	sigma[s,n]
 	vS[t,s,n]
 	vD[t,s,n]
 	TotalTax[t,s]
@@ -168,8 +168,8 @@ variables
 ;
 $GDXIN %rname_3%
 $onMulti
-$load sigma
 $load mu
+$load sigma
 $load vS
 $load vD
 $load TotalTax
@@ -198,20 +198,20 @@ $offMulti;
 # ---------------------------------------------B_APi_tree---------------------------------------------
 #  Initialize B_APi_tree equation block
 # ----------------------------------------------------------------------------------------------------
-EQUATION E_zp_out_tree[t,s,n];
-E_zp_out_tree[t,s,n]$(knot_o_tree[s,n] and txe[t]).. 	pS[t,s,n]*qS[t,s,n]  =E=  sum(nn$(map_tree[s,n,nn]), qD[t,s,nn]*pD[t,s,nn]);
-EQUATION E_zp_nout_tree[t,s,n];
-E_zp_nout_tree[t,s,n]$(knot_no_tree[s,n] and txe[t]).. 	pD[t,s,n]*qD[t,s,n]  =E=  sum(nn$(map_tree[s,n,nn]), qD[t,s,nn]*pD[t,s,nn]);
-EQUATION E_q_out_tree[t,s,n];
-E_q_out_tree[t,s,n]$(branch2o_tree[s,n] and txe[t]).. 	qD[t,s,n]  =E=  sum(nn$(map_tree[s,nn,n]), mu[s,nn,n] * (pS[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qS[t,s,nn]);
-EQUATION E_q_nout_tree[t,s,n];
-E_q_nout_tree[t,s,n]$(branch2no_tree[s,n] and txe[t]).. 	qD[t,s,n]  =E=  sum(nn$(map_tree[s,nn,n]), mu[s,nn,n] * (pD[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qD[t,s,nn]);
+EQUATION E_zp_out_APi_tree[t,s,n];
+E_zp_out_APi_tree[t,s,n]$(knot_o_api_tree[s,n] and txe[t]).. 	pS[t,s,n]*qS[t,s,n]  =E=  sum(nn$(map_APi_tree[s,n,nn]), qD[t,s,nn]*pD[t,s,nn]);
+EQUATION E_zp_nout_APi_tree[t,s,n];
+E_zp_nout_APi_tree[t,s,n]$(knot_no_api_tree[s,n] and txe[t]).. 	pD[t,s,n]*qD[t,s,n]  =E=  sum(nn$(map_APi_tree[s,n,nn]), qD[t,s,nn]*pD[t,s,nn]);
+EQUATION E_q_out_APi_tree[t,s,n];
+E_q_out_APi_tree[t,s,n]$(branch2o_api_tree[s,n] and txe[t]).. 	qD[t,s,n]  =E=  sum(nn$(map_APi_tree[s,nn,n]), mu[s,nn,n] * (pS[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qS[t,s,nn]);
+EQUATION E_q_nout_APi_tree[t,s,n];
+E_q_nout_APi_tree[t,s,n]$(branch2no_api_tree[s,n] and txe[t]).. 	qD[t,s,n]  =E=  sum(nn$(map_APi_tree[s,nn,n]), mu[s,nn,n] * (pD[t,s,nn]/pD[t,s,n])**(sigma[s,nn]) * qD[t,s,nn]);
 
 # ----------------------------------------------------------------------------------------------------
 #  Define B_APi_tree model
 # ----------------------------------------------------------------------------------------------------
 Model B_APi_tree /
-E_zp_out_tree, E_zp_nout_tree, E_q_out_tree, E_q_nout_tree
+E_zp_out_APi_tree, E_zp_nout_APi_tree, E_q_out_APi_tree, E_q_nout_APi_tree
 /;
 
 
@@ -220,20 +220,20 @@ E_zp_out_tree, E_zp_nout_tree, E_q_out_tree, E_q_nout_tree
 # ----------------------------------------------B_APi_IC----------------------------------------------
 #  Initialize B_APi_IC equation block
 # ----------------------------------------------------------------------------------------------------
-EQUATION E_lom_IC[t,s,n];
-E_lom_IC[t,s,n]$(dur_api[s,n] and txe[t]).. 	qD[t+1,s,n]	 =E=  (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
-EQUATION E_pk_IC[t,s,n];
-E_pk_IC[t,s,n]$(dur_api[s,n] and tx0e[t]).. 	pD[t,s,n]	 =E=  sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
-EQUATION E_Ktvc_IC[t,s,n];
-E_Ktvc_IC[t,s,n]$(dur_api[s,n] and te[t]).. 	qD[t,s,n]	 =E=  (1+K_tvc[s,n])*qD[t-1,s,n];
-EQUATION E_instcost_IC[t,s,n];
-E_instcost_IC[t,s,n]$(output_api[s,n] and txe[t]).. 	ic[t,s,n]  =E=  ((qS[t,s,n]*pS[t,s,n])/sum(nn$(output_APi[s,nn]), qS[t,s,nn]*pS[t,s,nn]))*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
+EQUATION E_lom_APi_IC[t,s,n];
+E_lom_APi_IC[t,s,n]$(dur_api[s,n] and txe[t]).. 	qD[t+1,s,n]	 =E=  (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
+EQUATION E_pk_APi_IC[t,s,n];
+E_pk_APi_IC[t,s,n]$(dur_api[s,n] and tx0e[t]).. 	pD[t,s,n]	 =E=  sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
+EQUATION E_Ktvc_APi_IC[t,s,n];
+E_Ktvc_APi_IC[t,s,n]$(dur_api[s,n] and te[t]).. 	qD[t,s,n]	 =E=  (1+K_tvc[s,n])*qD[t-1,s,n];
+EQUATION E_instcost_APi_IC[t,s,n];
+E_instcost_APi_IC[t,s,n]$(output_api[s,n] and txe[t]).. 	ic[t,s,n]  =E=  ((qS[t,s,n]*pS[t,s,n])/sum(nn$(output_APi[s,nn]), qS[t,s,nn]*pS[t,s,nn]))*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
 
 # ----------------------------------------------------------------------------------------------------
 #  Define B_APi_IC model
 # ----------------------------------------------------------------------------------------------------
 Model B_APi_IC /
-E_lom_IC, E_pk_IC, E_Ktvc_IC, E_instcost_IC
+E_lom_APi_IC, E_pk_APi_IC, E_Ktvc_APi_IC, E_instcost_APi_IC
 /;
 
 
@@ -242,14 +242,14 @@ E_lom_IC, E_pk_IC, E_Ktvc_IC, E_instcost_IC
 # --------------------------------------------B_APi_pWedge--------------------------------------------
 #  Initialize B_APi_pWedge equation block
 # ----------------------------------------------------------------------------------------------------
-EQUATION E_pw_pWedge[t,s,n];
-E_pw_pWedge[t,s,n]$(output_api[s,n] and txe[t]).. 	p[t,n]  =E=  (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
+EQUATION E_pw_APi_pWedge[t,s,n];
+E_pw_APi_pWedge[t,s,n]$(output_api[s,n] and txe[t]).. 	p[t,n]  =E=  (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
 
 # ----------------------------------------------------------------------------------------------------
 #  Define B_APi_pWedge model
 # ----------------------------------------------------------------------------------------------------
 Model B_APi_pWedge /
-E_pw_pWedge
+E_pw_APi_pWedge
 /;
 
 
@@ -286,7 +286,7 @@ ic.up[t,s,n]$((output_APi[s,n] and txE[t])) = inf;
 #  Define APi_B model
 # ----------------------------------------------------------------------------------------------------
 Model APi_B /
-E_zp_out_tree, E_zp_nout_tree, E_q_out_tree, E_q_nout_tree, E_lom_IC, E_pk_IC, E_Ktvc_IC, E_instcost_IC, E_pw_pWedge
+E_zp_out_APi_tree, E_zp_nout_APi_tree, E_q_out_APi_tree, E_q_nout_APi_tree, E_lom_APi_IC, E_pk_APi_IC, E_Ktvc_APi_IC, E_instcost_APi_IC, E_pw_APi_pWedge
 /;
 
 

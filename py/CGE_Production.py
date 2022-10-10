@@ -17,13 +17,13 @@ class Production(GmsPython):
 		self.s.db[self.n('inv')] = self.get('dur2inv').droplevel(self.ns['n']).unique().rename({self.ns['nn']:self.ns['n']})
 		self.s.db['n'] = self.get('n').union(self.get('inv').levels[-1])
 		self.s.db[self.n('input')] = self.get('input').difference(self.get('dur')).union(self.get('inv'))
-		self.m['IC'] = Submodule(**{'f': noneInit(f, 'sqrAdjCosts')})
+		self.m[f"{self.name}_IC"] = Submodule(**{'f': noneInit(f, 'sqrAdjCosts')})
 
 	def addPriceWedge(self,f=None):
 		self.ns.update({k: f"{k}_{self.name}" for k in ['s']})
 		self.s.db[self.n('output_n')] = self.get('output').levels[-1]
 		self.s.db[self.n('s')] = self.get('output').levels[0]
-		self.m['pWedge'] = Submodule(**{'f': noneInit(f,'priceWedge')})
+		self.m[f"{self.name}_pWedge"] = Submodule(**{'f': noneInit(f,'priceWedge')})
 
 	def readTree(self,tree):
 		gpyDB_wheels.robust.robust_merge_dbs(self.s.db,tree.db,priority='second')
@@ -117,9 +117,9 @@ class Production(GmsPython):
 	def states(self,m=None):
 		return {k: self.s.standardInstance(state=k) | {attr: getattr(self,attr)()[k] for attr in ('g_endo','g_exo','blocks','args')} for k in ('B','C')}
 	def args(self):
-		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(f"{self.name}_{name}", name, self.name) for name,module in self.m.items()])} for k in ('B','C')}
+		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(name, self.name) for name,module in self.m.items()])} for k in ('B','C')}
 	def blocks(self):
-		return {k: OrdSet([f"B_{self.name}_{name}" for name in self.m]) for k in ('B','C')}
+		return {k: OrdSet([f"B_{name}" for name in self.m]) for k in ('B','C')}
 	def g_endo(self):
 		return {'B': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_endo_dur"]),
 				'C': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_endo_in_calib",f"G_{self.name}_endo_dur"])}
@@ -128,43 +128,43 @@ class Production(GmsPython):
 				'C': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_exo_dur"])}
 	def groups_(self,m=None):
 		return [GmsPy.Group(f"G_{self.name}_exo_always", 
-		v = 	[('qS', self.g('output',m=m)), 
-				 ('pD', self.g('input',m=m)), 
-				 ('sigma', self.g('kninp',m=m)), 
-				 ('eta', self.g('knout',m=m)), 
-				 ('mu', self.g('exomu',m=m)),
-				 ('tauS', self.g('output',m=m)),
+		v = 	[('qS', self.g('output')), 
+				 ('pD', self.g('input')), 
+				 ('sigma', self.g('kninp')), 
+				 ('eta', self.g('knout')), 
+				 ('mu', self.g('exomu')),
+				 ('tauS', self.g('output')),
 				 ('p', ('not', self.g('output_n')))],
-		neg_v = [('qS', ('and', [self.g('endo_qS',m=m),self.g('t0')]))]
+		neg_v = [('qS', ('and', [self.g('endo_qS'),self.g('t0')]))]
 				),
 				GmsPy.Group(f"G_{self.name}_endo_always",
-		v = 	[('pD', self.g('int',m=m)),
-				 ('pS', self.g('output',m=m)),
-				 ('p' , ('and', [self.g('output_n',m=m), self.g('tx0')])),
-				 ('qD', ('and', [('or', [self.g('int',m=m), self.g('input',m=m)]), self.g('tx0')])),
-				 ('qD', ('and', [self.g('endo_qD',m=m), self.g('t0')])),
+		v = 	[('pD', self.g('int')),
+				 ('pS', self.g('output')),
+				 ('p' , ('and', [self.g('output_n'), self.g('tx0')])),
+				 ('qD', ('and', [('or', [self.g('int'), self.g('input')]), self.g('tx0')])),
+				 ('qD', ('and', [self.g('endo_qD'), self.g('t0')])),
 				 ('qiv_inp', self.g('spinp')),
 				 ('qiv_out', self.g('spout'))]),
 				GmsPy.Group(f"G_{self.name}_exo_in_calib",
-		v = 	[('qD', ('and', [('or', [self.g('int',m=m), self.g('input',m=m)]), self.g('t0')])),
-				 ('p' , ('and', [self.g('output_n',m=m), self.g('t0')]))],
-		neg_v = [('qD', ('and', [self.g('endo_qD',m=m), self.g('t0')]))]),
+		v = 	[('qD', ('and', [('or', [self.g('int'), self.g('input')]), self.g('t0')])),
+				 ('p' , ('and', [self.g('output_n'), self.g('t0')]))],
+		neg_v = [('qD', ('and', [self.g('endo_qD'), self.g('t0')]))]),
 				GmsPy.Group(f"G_{self.name}_endo_in_calib",
-		v = 	[('mu', ('and', [self.g('map',m=m), ('not', self.g('exomu',m=m))])),
-				 ('qS', ('and', [self.g('endo_qS',m=m), self.g('t0')])),
-				 ('markup', self.g('s',m=m))]),
+		v = 	[('mu', ('and', [self.g('map'), ('not', self.g('exomu'))])),
+				 ('qS', ('and', [self.g('endo_qS'), self.g('t0')])),
+				 ('markup', self.g('s'))]),
 				GmsPy.Group(f"G_{self.name}_exo_dur", 
 		v = [('Rrate', None),
-			 ('rDepr', self.g('dur',m=m)),
-			 ('icpar1', self.g('dur',m=m)),
-			 ('icpar2', self.g('dur',m=m)),
-			 ('K_tvc' , self.g('dur',m=m)),
-			 ('qD', ('and', [self.g('dur',m=m), self.g('t0')]))
+			 ('rDepr', self.g('dur')),
+			 ('icpar1', self.g('dur')),
+			 ('icpar2', self.g('dur')),
+			 ('K_tvc' , self.g('dur')),
+			 ('qD', ('and', [self.g('dur'), self.g('t0')]))
 			 ]),
 				GmsPy.Group(f"G_{self.name}_endo_dur",
-		v = [('qD', ('and', [self.g('dur',m=m), self.g('tx0')])),
-			 ('pD', ('and', [self.g('dur',m=m), self.g('txE')])),
-			 ('ic', ('and', [self.g('output',m=m), self.g('txE')]))
+		v = [('qD', ('and', [self.g('dur'), self.g('tx0')])),
+			 ('pD', ('and', [self.g('dur'), self.g('txE')])),
+			 ('ic', ('and', [self.g('output'), self.g('txE')]))
 		]
 		)]
 
@@ -185,13 +185,13 @@ class Production_ExoMu(GmsPython):
 		self.s.db[self.n('inv')] = self.get('dur2inv').droplevel(self.ns['n']).unique().rename({self.ns['nn']:self.ns['n']})
 		self.s.db['n'] = self.get('n').union(self.get('inv').levels[-1])
 		self.s.db[self.n('input')] = self.get('input').difference(self.get('dur')).union(self.get('inv'))
-		self.m['IC'] = Submodule(**{'f': noneInit(f, 'sqrAdjCosts')})
+		self.m[f"{self.name}_IC"] = Submodule(**{'f': noneInit(f, 'sqrAdjCosts')})
 
 	def addPriceWedge(self,f=None):
 		self.ns.update({k: f"{k}_{self.name}" for k in ['s']})
 		self.s.db[self.n('output_n')] = self.get('output').levels[-1]
 		self.s.db[self.n('s')] = self.get('output').levels[0]
-		self.m['pWedge'] = Submodule(**{'f': noneInit(f,'priceWedge')})
+		self.m[f"{self.name}_pWedge"] = Submodule(**{'f': noneInit(f,'priceWedge')})
 
 	def readTree(self,tree):
 		gpyDB_wheels.robust.robust_merge_dbs(self.s.db,tree.db,priority='second')
@@ -274,9 +274,9 @@ class Production_ExoMu(GmsPython):
 	def states(self,m=None):
 		return {k: self.s.standardInstance(state=k) | {attr: getattr(self,attr)()[k] for attr in ('g_endo','g_exo','blocks','args')} for k in ('B','C')}
 	def args(self):
-		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(f"{self.name}_{name}", name, self.name) for name,module in self.m.items()])} for k in ('B','C')}
+		return {k: {self.name+'_Blocks': '\n'.join([getattr(GamsProduction, module.f)(name, self.name) for name,module in self.m.items()])} for k in ('B','C')}
 	def blocks(self):
-		return {k: OrdSet([f"B_{self.name}_{name}" for name in self.m]) for k in ('B','C')}
+		return {k: OrdSet([f"B_{name}" for name in self.m]) for k in ('B','C')}
 	def g_endo(self):
 		return {'B': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_endo_dur"]),
 				'C': OrdSet([f"G_{self.name}_endo_always", f"G_{self.name}_endo_in_calib",f"G_{self.name}_endo_dur"])}
@@ -285,43 +285,43 @@ class Production_ExoMu(GmsPython):
 				'C': OrdSet([f"G_{self.name}_exo_always", f"G_{self.name}_exo_in_calib", f"G_{self.name}_exo_dur"])}
 	def groups_(self,m=None):
 		return [GmsPy.Group(f"G_{self.name}_exo_always", 
-		v = 	[('qS', self.g('output',m=m)), 
-				 ('pD', self.g('input',m=m)), 
-				 ('sigma', self.g('kninp',m=m)), 
-				 ('eta', self.g('knout',m=m)),
-				 ('mu', self.g('map',m=m)),
-				 ('tauS', self.g('output',m=m)),
+		v = 	[('qS', self.g('output')), 
+				 ('pD', self.g('input')), 
+				 ('sigma', self.g('kninp')), 
+				 ('eta', self.g('knout')),
+				 ('mu', self.g('map')),
+				 ('tauS', self.g('output')),
 				 ('p', ('not', self.g('output_n')))],
 		neg_v = [('mu', self.g('endo_mu'))]
 				),
 				GmsPy.Group(f"G_{self.name}_endo_always",
-		v = 	[('pD', self.g('int',m=m)),
-				 ('pS', self.g('output',m=m)),
-				 ('p' , ('and', [self.g('output_n',m=m), self.g('tx0')])),
-				 ('qD', self.g('int',m=m)),
-				 ('qD', ('and', [self.g('input',m=m), self.g('tx0')])),
-				 ('qD', ('and', [self.g('endo_qD',m=m), self.g('t0')])),
+		v = 	[('pD', self.g('int')),
+				 ('pS', self.g('output')),
+				 ('p' , ('and', [self.g('output_n'), self.g('tx0')])),
+				 ('qD', self.g('int')),
+				 ('qD', ('and', [self.g('input'), self.g('tx0')])),
+				 ('qD', ('and', [self.g('endo_qD'), self.g('t0')])),
 				 ('qiv_inp', self.g('spinp')),
 				 ('qiv_out', self.g('spout'))]),
 				GmsPy.Group(f"G_{self.name}_exo_in_calib",
-		v = 	[('qD', ('and', [self.g('input',m=m), self.g('t0')])),
-				 ('p' , ('and', [self.g('output_n',m=m), self.g('t0')]))],
-		neg_v = [('qD', ('and', [self.g('endo_qD',m=m), self.g('t0')]))]),
+		v = 	[('qD', ('and', [self.g('input'), self.g('t0')])),
+				 ('p' , ('and', [self.g('output_n'), self.g('t0')]))],
+		neg_v = [('qD', ('and', [self.g('endo_qD'), self.g('t0')]))]),
 				GmsPy.Group(f"G_{self.name}_endo_in_calib",
-		v = 	[('mu', self.g('endo_mu',m=m)),
-				 ('markup', self.g('s',m=m))]),
+		v = 	[('mu', self.g('endo_mu')),
+				 ('markup', self.g('s'))]),
 				GmsPy.Group(f"G_{self.name}_exo_dur", 
 		v = [('Rrate', None),
-			 ('rDepr', self.g('dur',m=m)),
-			 ('icpar1', self.g('dur',m=m)),
-			 ('icpar2', self.g('dur',m=m)),
-			 ('K_tvc' , self.g('dur',m=m)),
-			 ('qD', ('and', [self.g('dur',m=m), self.g('t0')]))
+			 ('rDepr', self.g('dur')),
+			 ('icpar1', self.g('dur')),
+			 ('icpar2', self.g('dur')),
+			 ('K_tvc' , self.g('dur')),
+			 ('qD', ('and', [self.g('dur'), self.g('t0')]))
 			 ]),
 				GmsPy.Group(f"G_{self.name}_endo_dur",
-		v = [('qD', ('and', [self.g('dur',m=m), self.g('tx0')])),
-			 ('pD', ('and', [self.g('dur',m=m), self.g('txE')])),
-			 ('ic', ('and', [self.g('output',m=m), self.g('txE')]))
+		v = [('qD', ('and', [self.g('dur'), self.g('tx0')])),
+			 ('pD', ('and', [self.g('dur'), self.g('txE')])),
+			 ('ic', ('and', [self.g('output'), self.g('txE')]))
 		]
 		)]
 

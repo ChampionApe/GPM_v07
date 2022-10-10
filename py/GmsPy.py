@@ -41,20 +41,20 @@ def mergeOrdSets(l,attr,state):
 def attrFromState(s,attr,state):
 	return s[attr] if state not in s.try_state(state) else s.try_state(state)[attr] 
 
-def mergeStates_k(main,other,l,k,order=gmspyStandardOrder):
+def mergeStates_k(main, other, l, k, mergeArgs = False, order=gmspyStandardOrder):
 	d = {'name': main.name+'_'+k, 'g_endo': mergeOrdSets(l,'g_endo',k), 'g_exo': mergeOrdSets(l,'g_exo',k),'blocks':mergeOrdSets(l,'blocks',k), 'solve': main.try_state(k)['solve']}
-	return d | {'args': sortedArgs({key:value for di in [attrFromState(other_i,'args',k) for other_i in l] for key,value in di.items()},order=order),
-				'text': sortedArgs({key:value for di in [attrFromState(other_i,'text',k) for other_i in l] for key,value in di.items()},order=order)}
+	return d | {'args': {}, 'text': {}} if mergeArgs is False else d | {'args': sortedArgs({key:value for di in [attrFromState(other_i,'args',k) for other_i in l] for key,value in di.items()},order=order),
+											 'text': sortedArgs({key:value for di in [attrFromState(other_i,'text',k) for other_i in l] for key,value in di.items()},order=order)}
 
-def mergeStates(main,other,l,order=None):
+def mergeStates(main,other,l,mergeArgs=False,order=None):
 	order = gmspyStandardOrder if order is None else order
-	return {k: mergeStates_k(main,other,l,k,order=order) for other_i in l for k in other_i.states}
+	return {k: mergeStates_k(main,other,l,k,mergeArgs=mergeArgs,order=order) for other_i in l for k in other_i.states}
 
-def mergeGmsSettings(main,other,order=None,residual=True):
+def mergeGmsSettings(main,other,order=None,residual=True,addStates=False):
 	l = [main]+other
-	mdicts = {k: mergeDictAttrs(l,k) for k in ('macros','groups','locals')}
-	mdictmain = {k: getattr(main,k) for k in ('name','state','Precompiler','Precompiler_options')}
-	main.addAdjustedSettings(mdictmain | mdicts | {'states': mergeStates(main,other,l,order=order), 'db': main.db})
+	[main.__setattr__(k,v) for k,v in {k: mergeDictAttrs(l,k) for k in ('macros','locals')}.items()]
+	mergeCompile(main.Compile,[i.Compile for i in other])
+	main.states = mergeStates(main, other,l,order=order)
 	main.Compile.run()
 	mergeDbs(main,other,residual=residual)
 	return main
@@ -74,7 +74,7 @@ class GmsSettings:
 
 	@property
 	def simpleStdSettings(self):
-		return {'name': 'name', 'macros': {},'locals':{},'state':'B','Precompiler_options':{'has_read_file':True}}
+		return {'name': 'name', 'macros': {},'locals':{},'mainDbName': None, 'state':'B','Precompiler_options':{'has_read_file':True}}
 
 	def standardInstance(self,state='B'):
 		return {'name': f"{self.name}_{state}", 'g_endo': OrdSet(), 'g_exo': OrdSet(), 'blocks': OrdSet(), 'solve': None, 'args': {}, 'text': {}}
@@ -150,6 +150,7 @@ class GmsSettings:
 		return {'Root': GmsWrite.writeRoot()} | args if not (list(args.keys()))[0].endswith(('Root','Root.gms','Root.gmy','Root.txt')) else args
 
 	def stdArgs(self,blocks='',functions=None,prefix=None,prefix_run=None,run=True):
+		self.mainDbName = self.db.name
 		return GmsWrite.standardArgs(self,self.db,f"""%{self.db.name}%""",blocks=blocks,functions=functions,run=run,prefix=self.name+'_' if prefix is None else prefix, prefix_run = self['name']+'_' if prefix_run is None else prefix_run)
 
 	def sortedArgs(self, order = gmspyStandardOrder):

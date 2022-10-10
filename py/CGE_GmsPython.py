@@ -75,11 +75,11 @@ class GmsPython:
 	def compile_states(self,**kwargs):
 		self.s.states.update(self.states(**kwargs))
 
-	def states(self,compile_modules = True,order=None):
+	def states(self,compile_modules = True,order=None, mergeArgs = True):
 		if compile_modules:
-			[m.compile_states(compile_modules=True,order=order) for m in self.m.values() if hasattr(m,'compile_states')];
+			[m.compile_states() for m in self.m.values() if hasattr(m,'compile_states')];
 		other = [m.s for m in self.m.values() if hasattr(m,'s')]+[m for m in self.m.values() if hasattr(m,'states') and isinstance(m,Submodule)];
-		return GmsPy.mergeStates(self.s, other, [self.s]+other, order=order)
+		return GmsPy.mergeStates(self.s, other, [self.s]+other, mergeArgs = mergeArgs, order=order)
 
 	def initDB(self):
 		for m in self.m.values():
@@ -87,6 +87,7 @@ class GmsPython:
 				gpyDB_wheels.robust.robust_merge_dbs(self.s.db,m.initDB(m=m.name),priority='first')
 	def groups(self):
 		return self.getAttrFromModules('groups')
+
 	def getAttrFromModules(self,attr):
 		return {k:v for d in (getattr(m,attr)(m=m.name) if hasattr(m,attr) else {} for m in self.m.values()) for k,v in d.items()}
 

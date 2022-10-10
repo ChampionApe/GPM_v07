@@ -3,6 +3,11 @@ from pyDatabases import OrdSet
 from auxFunctions import noneInit, dictInit
 from GmsWrite import writeGpy
 
+def mergeCompile(main,other):
+	main.declared = main.declared.union(*[other_i.declared for other_i in other])
+	main.groups.update({k:v for d in other for k,v in d.groups.items()})
+	return main
+
 class Compile:
 	def __init__(self,groups=None):
 		self.declared = OrdSet()
