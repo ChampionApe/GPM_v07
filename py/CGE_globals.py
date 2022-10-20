@@ -20,7 +20,7 @@ class SmallOpen:
 		return ['t', 't0', 'tx0', 'tE', 'txE', 'tx0E']
 
 	def LRP_values(self,kwargs):
-		_stdvals = {'R_LR': 1.03, 'g_LR': 0.02, 'infl_LR': 0.02}
+		_stdvals = {'R_LR': 1.03, 'g_LR': 0.02, 'infl_LR': 0}
 		return {self.ns[k]: gpyDB.gpy(_stdvals[k] if k not in kwargs else kwargs[k],**{'type':'parameter','name':self.ns[k]}) for k in _stdvals}
 
 	def Time_values(self,kwargs):

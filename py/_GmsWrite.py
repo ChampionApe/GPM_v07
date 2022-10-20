@@ -145,10 +145,10 @@ def loopText(text, domains, c = None):
 	return f"loop({domains}{condition(c=c)},\n\t{text}\n);"
 
 def updateFromGridDB(db0, db, name, updateDict):
-	return ';\n\t'.join([f"{writeGpy(db0[k], c=v['c'], l = '.fx')} = {writeGpy(db[v['par']])}" for k,v in updateDict.items()])+';'
+	return ';\n\t'.join([f"{writeGpy(db0[k], c=v['c'], l = '.fx')} = {writeGpy(db[v['par']])}" for k,v in updateDict.items()])+';' if updateDict else ""
 
 def updateSolFromGridDB(db0, db, name, updateSolDict):
-	return ';\n\t'.join([f"{writeGpy( db[k], c=v['c'], l = '.fx')} = {writeGpy(db0[v['var']], l = '.l')}" for k,v in updateSolDict.items()])+';'
+	return ';\n\t'.join([f"{writeGpy( db[k], c=v['c'], l = '.fx')} = {writeGpy(db0[v['var']], l = '.l')}" for k,v in updateSolDict.items()])+';' if updateSolDict else ""
 
 def declareFromGridDB(db0, db):
 	return writeDeclare(db, exceptions=OrdSet(db0.symbols), exceptions_load = OrdSet(db0.symbols)+OrdSet([k for k in db.symbols if k.startswith('sol_')]), gdx = f"""%{db.name}%""")

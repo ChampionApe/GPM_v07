@@ -1,13 +1,13 @@
 from CGE_GmsPython import *
-import GamsProduction
+import GamsProduction, GamsHouseholds
 from auxFunctions import stackIndices
 
 class valueShares(GmsPython):
-	def __init__(self, tree, db_IO, s=None, s_kwargs = None):
+	def __init__(self, tree, db_IO, s=None, s_kwargs = None, valueFromQP = True):
 		""" Initialize from nesting tree 'tree'. """
 		super().__init__(name=f"valueShare_{tree.name}", s=s, s_kwargs = noneInit(s_kwargs, {}) | {'db': db_IO})
 		self.setsFromTree(tree)
-		self.initValues(tree)
+		self.initValues(tree, valueFromQP = valueFromQP)
 	def states(self):
 		return {'B': self.s.standardInstance(state='B') | {attr: getattr(self,attr)() for attr in ('g_endo','g_exo','blocks','args','solve')}}
 	def solve(self):
@@ -53,9 +53,9 @@ class valueShares(GmsPython):
 			self.s.db['branch2Out']  = pd.MultiIndex.from_tuples([], names = ['s','n'])
 			self.s.db['branch2NOut'] = pd.MultiIndex.from_tuples([], names = ['s','n'])
 		[self.s.db.__setitem__(k, Tree.get(k)) for k in ('map','output','input','int')];
-		gpyDB_wheels.aggregateDB.readSets(self.s.db, types = ['variable','parameter','mapping'])
+		aggregateDB.readSets(self.s.db, types = ['variable','parameter','mapping'])
 		if Tree.namespace:
-			gpyDB_wheels.aggregateDB.updateSetValues(self.s.db,'n',Tree.namespace, remove_unused_levels = True)
+			aggregateDB.updateSetValues(self.s.db,'n',Tree.namespace, remove_unused_levels = True)
 
 	def initValues(self, Tree, valueFromQP = True):
 		tIndex = self.s.db.get('vD').index.levels[0]
@@ -66,4 +66,26 @@ class valueShares(GmsPython):
 		return self.s.db.get('qD') * self.s.db.get('pD') if valueFromQP else self.s.db.get('vD')
 	def initvS(self):
 		""" Balance value of outputs to value of inputs"""
-		return self.get('vS') * (gpyDB_wheels.adj.rc_pd(self.get('vD'), self.get('input')).groupby(['t','s']).sum() / self.get('vS'))
+		return self.get('vS') * (adj.rc_pd(self.get('vD'), self.get('input')).groupby(['t','s']).sum() / self.get('vS'))
+
+
+class SimpleRamsey(valueShares):
+	def __init__(self, tree, db_IO, s=None, s_kwargs = None):
+		""" Initialize from nesting tree 'tree'. """
+		super().__init__(tree, db_IO, s = s, s_kwargs = s_kwargs, valueFromQP = False)
+
+	def initValues(self, Tree, valueFromQP = False):
+		tIndex = self.s.db.get('vD').index.levels[0]
+		self.s.db['mu'] = adjMultiIndex.bc(pd.Series(1, index = tIndex), Tree.get('map'))
+		self.s.db['vD'] = self.initvD(valueFromQP=valueFromQP).combine_first(adjMultiIndex.bc(pd.Series(1, index = tIndex), Tree.get('int').union(Tree.get('output'))))
+
+	def args(self):
+		return {'valueShare_Blocks': GamsHouseholds.valueShares()}
+
+	def groups_(self):
+		return [GmsPy.Group(f"G_{self.name}_exo",
+				v = [('vD', self.g('input'))]
+				),
+				GmsPy.Group(f"G_{self.name}_endo",
+				v = [('mu', self.g('map')), ('vD', ('or', [self.g('int'), self.g('output')]))]
+				)]

@@ -1,5 +1,6 @@
 import CGE_globals, GmsPy, GmsWrite, pickle, pandas as pd, os
-from pyDatabases import gpyDB, gpyDB_wheels, OrdSet, adjMultiIndexDB, adjMultiIndex, gpy
+from pyDatabases import gpy, GpyDB, gpyDB, OrdSet, adjMultiIndexDB, adjMultiIndex
+from pyDatabases.gpyDB_wheels import read, robust, adj, aggregateDB
 from GmsPy import gmspyStandardOrder
 from auxFunctions import noneInit, dictInit
 
@@ -84,7 +85,7 @@ class GmsPython:
 	def initDB(self):
 		for m in self.m.values():
 			if hasattr(m,'initDB'):
-				gpyDB_wheels.robust.robust_merge_dbs(self.s.db,m.initDB(m=m.name),priority='first')
+				robust.robust_merge_dbs(self.s.db,m.initDB(m=m.name),priority='first')
 	def groups(self):
 		return self.getAttrFromModules('groups')
 

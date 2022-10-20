@@ -90,16 +90,18 @@ $BLOCK B_{name}
 	E_lom_{name}[t,s,n]$(dur_{m}[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
 	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
 	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
-	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= ((qS[t,s,n]*pS[t,s,n])/sum(nn$(output_{m}[s,nn]), qS[t,s,nn]*pS[t,s,nn]))*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
+	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= outShare[t,s,n]*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
 $ENDBLOCK
 """
-
 
 # 4: Introduce price wedge with mark-up, unit-tax, and installation costs
 def priceWedge(name,m):
 	return f"""
 $BLOCK B_{name}
-	E_pw_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	p[t,n] =E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]);
+	E_pwInp_{name}[t,s,n]$(input_{m}[s,n] and txE[t])..			pD[t,s,n]		=E= p[t,n]+tauD[t,s,n];	
+	E_pwOut_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..		p[t,n] 			=E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]+tauLump[t,s]*outShare[t,s,n]/qS[t,s,n]);
+	E_outShare_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..		outShare[t,s,n] =E= qS[t,s,n]*pS[t,s,n]/(sum(nn$(output_{m}[s,nn]), qS[t,s,nn]*pS[t,s,nn]));
+	E_TaxRev_{name}[t,s]$(s_{m}[s] and txE[t])..				TotalTax[t,s]	=E= tauLump[t,s]+sum(n$(input_{m}[s,n]), tauD[t,s,n] * qD[t,s,n])+sum(n$(output_{m}[s,n]), tauS[t,s,n]*qS[t,s,n]);
 $ENDBLOCK
 """
 
