@@ -91,8 +91,7 @@ class Production(GmsPython):
 				self.n('qiv_inp'): gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('spinp',m=m)],self.s.db), name = self.n('qiv_inp'))),
 				self.n('Rrate'): gpy(pd.Series(self.get('R_LR'), index = self.get('t'), name = self.n('Rrate'))),
 				self.n('rDepr'): gpy(pd.Series(0.075, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('dur',m=m)],self.s.db), name = self.n('rDepr',m=m))),
-				self.n('icpar1'): gpy(pd.Series(0.025, index = self.get('dur',m=m), name= self.n('icpar1',m=m))),
-				self.n('icpar2'): gpy(pd.Series(0.095, index = self.get('dur',m=m), name= self.n('icpar2',m=m))),
+				self.n('icpar'): gpy(pd.Series(1, index = self.get('dur',m=m), name= self.n('icpar',m=m))),
 				self.n('K_tvc'): gpy(pd.Series(0, index = self.get('dur',m=m), name=self.n('K_tvc',m=m))),
 				self.n('ic'): gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'), self.get('output',m=m)], self.s.db), name= self.n('ic',m=m))),
 				self.n('p'): gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('output_n',m=m).union(self.get('input_n',m=m))],self.s.db), name=self.n('p'))),
@@ -106,7 +105,7 @@ class Production(GmsPython):
 	def initDurables(self):
 		robust.robust_merge_dbs(self.s.db,
 		{self.n('rDepr'): gpy(pd.Series(0.075, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('dur')],self.s.db), name = self.n('rDepr'))),
-		 self.n('icpar1'): gpy(pd.Series(0.025, index = self.get('dur'), name= self.n('icpar1'))),
+		 self.n('icpar'): gpy(pd.Series(1, index = self.get('dur'), name= self.n('icpar'))),
 		 self.n('K_tvc') : gpy(pd.Series(0, index = self.get('dur'), name=self.n('K_tvc')))},
 		priority='first')
 		self.adjustToSteadyState()
@@ -114,7 +113,6 @@ class Production(GmsPython):
 	def adjustToSteadyState(self,m=None):
 		robust.robust_merge_dbs(self.s.db,
 		{self.n('qD'): gpy(adjMultiIndex.applyMult((self.get('g_LR')+self.get('rDepr',m=m))*adj.rc_pd(self.get('qD'), self.get('dur',m=m)), self.get('dur2inv',m=m)).droplevel('n').rename_axis(index={'nn':'n'}), **{'name': self.n('qD')}),
-		 self.n('icpar2'): gpy(self.get('g_LR')+self.get('rDepr',m=m).xs(self.get('t0')[0],level=self.n('t')), **{'name': self.n('icpar2')}),
 		 self.n('pD'): gpy(adjMultiIndex.applyMult(adj.rc_pd(self.get('pD'), self.get('dur',m=m))/(self.get('Rrate')/(1+self.get('infl_LR'))-(1-self.get('rDepr',m=m))), self.get('dur2inv',m=m)).droplevel('n').rename_axis(index={'nn':'n'}), **{'name':self.n('pD')})}
 		,priority='second')
 
@@ -169,8 +167,7 @@ class Production(GmsPython):
 				GmsPy.Group(f"G_{self.name}_exo_dur", 
 		v = [('Rrate', None),
 			 ('rDepr', self.g('dur')),
-			 ('icpar1', self.g('dur')),
-			 ('icpar2', self.g('dur')),
+			 ('icpar', self.g('dur')),
 			 ('K_tvc' , self.g('dur')),
 			 ('qD', ('and', [self.g('dur'), self.g('t0')]))
 			 ]),
@@ -276,8 +273,7 @@ class Production_ExoMu(Production):
 				GmsPy.Group(f"G_{self.name}_exo_dur", 
 		v = [('Rrate', None),
 			 ('rDepr', self.g('dur')),
-			 ('icpar1', self.g('dur')),
-			 ('icpar2', self.g('dur')),
+			 ('icpar', self.g('dur')),
 			 ('K_tvc' , self.g('dur')),
 			 ('qD', ('and', [self.g('dur'), self.g('t0')]))
 			 ]),

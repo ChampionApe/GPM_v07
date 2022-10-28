@@ -87,12 +87,14 @@ def MNL_out(name,m,inclusiveVal = False):
 def sqrAdjCosts(name, m):
 	return f"""
 $BLOCK B_{name}
-	E_lom_{name}[t,s,n]$(dur_{m}[s,n] and txE[t])..	qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
-	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx0E[t])..	pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*(pD[t-1,s,nn]/(1+infl_LR)+icpar1[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-icpar2[s,n]))+(icpar1[s,n]*0.5)*sqr(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])-(1-rDepr[t,s,n])*(pD[t,s,nn]+icpar1[s,n]*(qD[t,s,nn]/qD[t,s,n]-icpar2[s,n])));
-	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..	qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
-	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= outShare[t,s,n]*sum([nn,nnn]$(dur2inv[s,nn,nnn]), icpar1[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-icpar2[s,nn]));
+	E_lom_{name}[t,s,n]$(dur_{m}[s,n] and txE[t])..		qD[t+1,s,n]	=E= (qD[t,s,n]*(1-rDepr[t,s,n])+sum(nn$(dur2inv[s,n,nn]), qD[t,s,nn]))/(1+g_LR);
+	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx02E[t])..	pD[t,s,n]	=E= sqrt(sqr(sum(nn$(dur2inv[s,n,nn]), Rrate[t]*pD[t-1,s,nn]*(1+icpar[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-(rDepr[t-1,s,n]+g_LR)))/(1+infl_LR)+pD[t,s,nn]*(icpar[s,n]*0.5*(sqr(rDepr[t,s,n]+g_LR)-sqr(qD[t,s,nn]/qD[t,s,n]))-(1-rDepr[t,s,n])*(1+icpar[s,n]*(qD[t,s,nn]/qD[t,s,n]-(rDepr[t,s,n]+g_LR)))))));
+	E_pkT_{name}[t,s,n]$(dur_{m}[s,n] and t2E[t])..		pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*pD[t-1,s,nn] * (1+icpar[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-(rDepr[t-1,s,n]+g_LR)))/(1+infl_LR) + (rDepr[t,s,n]-1)*pD[t,s,nn]);
+	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..		qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
+	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= outShare[t,s,n]*sum([nn,nnn]$(dur2inv[s,nn,nnn]), pD[t,s,nnn] * icpar[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-(rDepr[t,s,nn]+g_LR)));
 $ENDBLOCK
 """
+
 
 # 4: Introduce price wedge with mark-up, unit-tax, and installation costs
 def priceWedge(name,m):

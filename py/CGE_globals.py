@@ -17,7 +17,7 @@ class SmallOpen:
 
 	@property
 	def Time(self):
-		return ['t', 't0', 'tx0', 'tE', 'txE', 'tx0E']
+		return ['t', 't0', 'tx0', 'tE', 'txE', 'tx0E', 't2E','tx2E','tx02E']
 
 	def LRP_values(self,kwargs):
 		_stdvals = {'R_LR': 1.03, 'g_LR': 0.02, 'infl_LR': 0}
@@ -27,7 +27,10 @@ class SmallOpen:
 		t = pd.Index(kwargs['t'],name=self.ns['t']).astype(int).sort_values() if 't' in kwargs else pd.Index(range(1,3),name=self.ns['t'])
 		return {	self.ns['t']: gpyDB.gpy(t), 
 					self.ns['t0']: gpyDB.gpy(t[t==t[0]]), 
-					self.ns['tE']: gpyDB.gpy(t[t==t[-1]]), 
+					self.ns['tE']: gpyDB.gpy(t[t==t[-1]]),
+					self.ns['t2E']: gpyDB.gpy(t[t==t[-2]]),
 					self.ns['tx0']: gpyDB.gpy(t[t!= t[0]]), 
-					self.ns['txE']: gpyDB.gpy(t[t!= t[-1]]), 
-					self.ns['tx0E']: gpyDB.gpy(t[(t!=t[0]) & (t!=t[-1])])}
+					self.ns['txE']: gpyDB.gpy(t[t!= t[-1]]),
+					self.ns['tx2E']: gpyDB.gpy(t[:-2]),
+					self.ns['tx0E']: gpyDB.gpy(t[(t!=t[0]) & (t!=t[-1])]),
+					self.ns['tx02E']: gpyDB.gpy(t[:-2][1:])}
