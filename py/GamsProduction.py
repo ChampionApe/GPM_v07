@@ -91,7 +91,7 @@ $BLOCK B_{name}
 	E_pk_{name}[t,s,n]$(dur_{m}[s,n] and tx02E[t])..	pD[t,s,n]	=E= sqrt(sqr(sum(nn$(dur2inv[s,n,nn]), Rrate[t]*pD[t-1,s,nn]*(1+icpar[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-(rDepr[t-1,s,n]+g_LR)))/(1+infl_LR)+pD[t,s,nn]*(icpar[s,n]*0.5*(sqr(rDepr[t,s,n]+g_LR)-sqr(qD[t,s,nn]/qD[t,s,n]))-(1-rDepr[t,s,n])*(1+icpar[s,n]*(qD[t,s,nn]/qD[t,s,n]-(rDepr[t,s,n]+g_LR)))))));
 	E_pkT_{name}[t,s,n]$(dur_{m}[s,n] and t2E[t])..		pD[t,s,n]	=E= sum(nn$(dur2inv[s,n,nn]), Rrate[t]*pD[t-1,s,nn] * (1+icpar[s,n]*(qD[t-1,s,nn]/qD[t-1,s,n]-(rDepr[t-1,s,n]+g_LR)))/(1+infl_LR) + (rDepr[t,s,n]-1)*pD[t,s,nn]);
 	E_Ktvc_{name}[t,s,n]$(dur_{m}[s,n] and tE[t])..		qD[t,s,n]	=E= (1+K_tvc[s,n])*qD[t-1,s,n];
-	E_instcost_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..	ic[t,s,n] =E= outShare[t,s,n]*sum([nn,nnn]$(dur2inv[s,nn,nnn]), pD[t,s,nnn] * icpar[s,nn]*0.5*qD[t,s,nn]*sqr(qD[t,s,nnn]/qD[t,s,nn]-(rDepr[t,s,nn]+g_LR)));
+	E_instcost_{name}[t,s]$(s_{m}[s] and txE[t])..		ic[t,s] 	=E= sum([n,nn]$(dur2inv[s,n,nn]), pD[t,s,nn] * icpar[s,n]*0.5*qD[t,s,n]*sqr(qD[t,s,nn]/qD[t,s,n]-(rDepr[t,s,n]+g_LR)));
 $ENDBLOCK
 """
 
@@ -101,7 +101,7 @@ def priceWedge(name,m):
 	return f"""
 $BLOCK B_{name}
 	E_pwInp_{name}[t,s,n]$(input_{m}[s,n] and txE[t])..			pD[t,s,n]		=E= p[t,n]+tauD[t,s,n];	
-	E_pwOut_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..		p[t,n] 			=E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+ic[t,s,n]+tauLump[t,s]*outShare[t,s,n]/qS[t,s,n]);
+	E_pwOut_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..		p[t,n] 			=E= (1+markup[s])*(pS[t,s,n]+tauS[t,s,n]+(outShare[t,s,n]/qS[t,s,n])*(ic[t,s]+tauLump[t,s]));
 	E_outShare_{name}[t,s,n]$(output_{m}[s,n] and txE[t])..		outShare[t,s,n] =E= qS[t,s,n]*pS[t,s,n]/(sum(nn$(output_{m}[s,nn]), qS[t,s,nn]*pS[t,s,nn]));
 	E_TaxRev_{name}[t,s]$(s_{m}[s] and txE[t])..				TotalTax[t,s]	=E= tauLump[t,s]+sum(n$(input_{m}[s,n]), tauD[t,s,n] * qD[t,s,n])+sum(n$(output_{m}[s,n]), tauS[t,s,n]*qS[t,s,n]);
 $ENDBLOCK

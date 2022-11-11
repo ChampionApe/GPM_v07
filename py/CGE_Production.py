@@ -93,7 +93,7 @@ class Production(GmsPython):
 				self.n('rDepr'): gpy(pd.Series(0.075, index = adjMultiIndexDB.mergeDomains([self.get('t'),self.get('dur',m=m)],self.s.db), name = self.n('rDepr',m=m))),
 				self.n('icpar'): gpy(pd.Series(1, index = self.get('dur',m=m), name= self.n('icpar',m=m))),
 				self.n('K_tvc'): gpy(pd.Series(0, index = self.get('dur',m=m), name=self.n('K_tvc',m=m))),
-				self.n('ic'): gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'), self.get('output',m=m)], self.s.db), name= self.n('ic',m=m))),
+				self.n('ic'): gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'), self.get('s')], self.s.db), name= self.n('ic',m=m))),
 				self.n('p'): gpy(pd.Series(1, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('output_n',m=m).union(self.get('input_n',m=m))],self.s.db), name=self.n('p'))),
 				self.n('markup'): gpy(pd.Series(1, index = self.get('s',m=m)), name = self.n('markup')),
 				self.n('tauS'): gpy(pd.Series(0, index = adjMultiIndexDB.mergeDomains([self.get('txE'),self.get('output',m=m)],self.s.db), name=self.n('tauS'))),
@@ -174,7 +174,7 @@ class Production(GmsPython):
 				GmsPy.Group(f"G_{self.name}_endo_dur",
 		v = [('qD', ('and', [self.g('dur'), self.g('tx0')])),
 			 ('pD', ('and', [self.g('dur'), self.g('txE')])),
-			 ('ic', ('and', [self.g('output'), self.g('txE')]))
+			 ('ic', ('and', [self.g('s'), self.g('txE')]))
 		]
 		)]
 
@@ -280,7 +280,7 @@ class Production_ExoMu(Production):
 				GmsPy.Group(f"G_{self.name}_endo_dur",
 		v = [('qD', ('and', [self.g('dur'), self.g('tx0')])),
 			 ('pD', ('and', [self.g('dur'), self.g('txE')])),
-			 ('ic', ('and', [self.g('output'), self.g('txE')]))
+			 ('ic', ('and', [self.g('s'), self.g('txE')]))
 		]
 		)]
 
